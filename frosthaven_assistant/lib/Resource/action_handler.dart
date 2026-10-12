@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
@@ -21,9 +22,13 @@ class ActionHandler {
   final List<String> _commandDescriptions = []; //only used when connected
   final List<GameSaveState?> _gameSaveStates = [];
 
-  List<Command?> get commands => List.unmodifiable(_commands);
-  List<String> get commandDescriptions => List.unmodifiable(_commandDescriptions);
-  List<GameSaveState?> get gameSaveStates => List.unmodifiable(_gameSaveStates);
+  // Read-only *views* (O(1)) rather than List.unmodifiable (O(n) copy).
+  // These are read several times per action (undo/redo menu state), so a
+  // copying getter turns every action into an O(n) scan and the whole
+  // session into O(n^2) as history grows — the fix is to not copy at all.
+  List<Command?> get commands => UnmodifiableListView(_commands);
+  List<String> get commandDescriptions => UnmodifiableListView(_commandDescriptions);
+  List<GameSaveState?> get gameSaveStates => UnmodifiableListView(_gameSaveStates);
 
   /// Resets all command/description/save-state history to a clean slate,
   /// keeping only the most recent save state as the baseline.
