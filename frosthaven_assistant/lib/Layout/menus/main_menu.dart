@@ -21,6 +21,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../Resource/settings.dart';
 import '../../Resource/ui_utils.dart';
 import '../../services/network/network.dart';
+import '../../services/service_locator.dart';
 import 'add_monster_menu.dart';
 import 'note_row_menu.dart';
 
@@ -282,10 +283,18 @@ class MainMenu extends StatelessWidget {
                   ? ListTile(
                       title: Text(l10n.menuExit),
                       enabled: true,
-                      onTap: () {
+                      onTap: () async {
                         Navigator.pop(context);
                         vm.save();
-                        windowManager.close();
+                        // Destroying the window while it is still in native
+                        // fullscreen races the OS's fullscreen-space teardown
+                        // and can leave the last rendered frame on screen
+                        // after the window is gone. Leave fullscreen first.
+                        final effectiveSettings = settings ?? getIt<Settings>();
+                        if (effectiveSettings.fullScreen.value) {
+                          await effectiveSettings.setFullscreen(false);
+                        }
+                        await windowManager.close();
                       },
                     )
                   : Container(),
